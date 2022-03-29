@@ -58,3 +58,5 @@ fig = plt.figure()
 fig.set_size_inches(16, 9)
 decompose.plot()
 plt.show()
+
+#Now it is turn to see whether we can make the ARIMA model or not.
