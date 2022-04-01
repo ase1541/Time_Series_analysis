@@ -12,9 +12,9 @@ yf.pdr_override()
 pd.set_option('display.float_format',  '{:,.2f}'.format)
 
 ### Hourly and Daily Time series-extraction  from yfinance
-first_date = '2020-04-01' #It only allows 2years of hourly data
-now=dt.datetime.today()
-today = now.strftime('%Y-%m-%d')
+ #It only allows 2years of hourly data
+today=dt.datetime.today()
+first_date = today - dt.timedelta(days=729)
 companies=['ROVI.MC', '^IBEX']
 #We get time series (Daily) for Ibex 35(it is an INDEX), and for the stock ROVI within this index
 I35_dly=pdr.get_data_yahoo(companies[1], start=first_date, end=today,interval="1d")
@@ -22,27 +22,31 @@ ROVI_dly=pdr.get_data_yahoo(companies[0], start=first_date, end=today,interval="
 #We get time series (Hourly) for Ibex 35(it is an INDEX), and for the stock ROVI within this index
 I35_hly=pdr.get_data_yahoo(companies[1], start=first_date, end=today,interval="1h")
 ROVI_hly=pdr.get_data_yahoo(companies[0], start=first_date, end=today,interval="1h")
-time_series={"ROVI_daily":ROVI_dly,"ROVI_hourly":ROVI_hly,"IBEX_daily":I35_dly,"IBEX_hourly":I35_hly}
+time_series={"ROVI_daily":ROVI_dly,"IBEX_daily":I35_dly ,"IBEX_hourly":I35_hly,"ROVI_hourly":ROVI_hly}#,"IBEX_hourly":I35_hly,"ROVI_hourly":ROVI_hly}
 
 ### If we wanted we can plot the different time series
 """for key in time_series:
-    Column="High"
-    plt.figure(figsize=(10,6))
-    plt.grid(True)
+    Column="Close"
+    fig, axes = plt.subplots(1, 2, figsize=(25,7))
+    axes[0].plot(time_series[key]["Close"])
+    axes[0].set_title(f'{key} Closing prices')
     plt.xlabel('Date')
-    plt.ylabel(f'{Column} Prices')
-    plt.plot(time_series[key][Column])
-    plt.title(key,fontsize=18, fontweight='bold')
+
+    axes[1].plot(time_series[key]["Volume"])
+    axes[1].set_title(f'{key} Volume traded')
+
+
+    plt.grid(True)
     plt.show()
 """
 from functions import dickey_fuller
 
 ### Statistical anlysis of every time series
 """for key in time_series:
-    column="Volume" #'Open', 'High', 'Low', 'Close', 'Adj Close', 'Volume'
+    column="Close" #'Open', 'High', 'Low', 'Close', 'Adj Close', 'Volume'
     fig, (ax1, ax2 ,ax3) = plt.subplots(1,3,figsize =(40,10))
     ax1.set_title('Kernel Density Estimate',fontsize=13)
-    fig.suptitle(key, fontsize=24)
+    fig.suptitle(f"{key} {column} ", fontsize=24)
     time_series[key]["Open"].plot(kind='kde',ax=ax1)
     plot_acf (time_series[key][column], lags = 250, ax=ax2)
     plot_pacf(time_series[key][column], lags = 250, ax=ax3)
@@ -59,32 +63,36 @@ plt.show()
 """
 
 ### Now we try to find p,d,q params for the ARIMA model
-#First we start with the param d for differentiation
-stock="IBEX_hourly"
-serie="Close"
-trial=time_series[stock][serie]
-plt.rcParams.update({'figure.figsize':(9,7), 'figure.dpi':120})
-# Original Series
-fig, axes = plt.subplots(3, 2)
-axes[0, 0].plot(trial)
-axes[0, 0].set_title('Original Series')
-plot_acf(trial, ax=axes[0, 1])
+#First we start with the param d for differentiation, for the p and d we find them through autoarima
+#This plots the differentiation test for every data set and every time series within the dataset.
+"""
+for stock in time_series.keys():
+    serie="Close"
+    trial=time_series[stock][serie]
+    plt.rcParams.update({'figure.figsize':(9,7), 'figure.dpi':120})
+    # Original Series
+    fig, axes = plt.subplots(3, 2)
+    axes[0, 0].plot(trial)
+    axes[0, 0].set_title(f'Original {stock} {serie} Series')
+    plot_acf(trial, ax=axes[0, 1])
 
-# 1st Differencing
-axes[1, 0].plot(trial.diff())
-axes[1, 0].set_title('1st Order Differencing')
-plot_acf(trial.diff().dropna(), ax=axes[1, 1])
+    # 1st Differencing
+    axes[1, 0].plot(trial.diff())
+    axes[1, 0].set_title(f'1st Order Differencing for {stock} {serie}')
+    plot_acf(trial.diff().dropna(), ax=axes[1, 1])
 
-# 2nd Differencing
-axes[2, 0].plot(trial.diff().diff())
-axes[2, 0].set_title('2nd Order Differencing')
-plot_acf(trial.diff().dropna(), ax=axes[2, 1])
-fig.tight_layout()
-plt.show()
+    # 2nd Differencing
+    axes[2, 0].plot(trial.diff().diff())
+    axes[2, 0].set_title(f'2nd Order Differencing for {stock} {serie}')
+    plot_acf(trial.diff().dropna(), ax=axes[2, 1])
+    fig.tight_layout()
+    plt.show()
 
-print("Diff value with adf test: ",ndiffs(trial, test='adf'))
-print("Diff value with kpss test: ",ndiffs(trial, test='kpss'))
-print("Diff value with pp test: ",ndiffs(trial, test='pp'))
+    print(f"Diff value with adf test for {stock} {serie}: ",ndiffs(trial, test='adf'))
+    print(f"Diff value with kpss test for {stock} {serie}: ",ndiffs(trial, test='kpss'))
+    print(f"Diff value with pp test for {stock} {serie}: ",ndiffs(trial, test='pp'))
+    print('\n')
+    """
 
 
 
